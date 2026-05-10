@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api/axios';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 
 const Categories = () => {
     const [categories, setCategories] = useState([]);
     const { register, handleSubmit, reset } = useForm();
+    const navigate = useNavigate();
 
     const token = localStorage.getItem('access');
 
@@ -51,6 +53,13 @@ const Categories = () => {
         <div className="container mt-4">
             <h2>Manage Categories</h2>
 
+            <button
+                className="btn btn-outline-secondary btn-sm mb-2"
+                onClick={() => navigate('/dashboard')}
+            >
+                ← Back to Dashboard
+            </button>
+
             <form onSubmit={handleSubmit(onSubmit)} className="mb-3 d-flex gap-2">
 
                 <input
@@ -89,8 +98,8 @@ const Categories = () => {
 
                                 <span
                                     className={`badge ms-2 ${cat.type === 'INCOME'
-                                            ? 'bg-success'
-                                            : 'bg-danger'
+                                        ? 'bg-success'
+                                        : 'bg-danger'
                                         }`}
                                 >
                                     {cat.type}
