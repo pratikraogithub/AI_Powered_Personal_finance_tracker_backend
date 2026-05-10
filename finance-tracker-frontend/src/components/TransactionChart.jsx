@@ -8,10 +8,15 @@ const COLORS = ['#4caf50', '#f44336', '#2196f3', '#ff9800', '#9c27b0', '#00bcd4'
 const TransactionChart = ({ data }) => {
     // Group by category
     const categoryData = {};
-    data.forEach(tx => {
-        const key = tx.category?.name || 'Uncategorized';
-        categoryData[key] = (categoryData[key] || 0) + parseFloat(tx.amount);
-    });
+
+    data
+        .filter(tx => tx.type === 'EXPENSE')
+        .forEach(tx => {
+            const key = tx.category?.name || 'Uncategorized';
+
+            categoryData[key] =
+                (categoryData[key] || 0) + parseFloat(tx.amount);
+        });
 
     const pieData = Object.entries(categoryData).map(([name, value]) => ({ name, value }));
 
@@ -32,7 +37,7 @@ const TransactionChart = ({ data }) => {
     return (
         <div className="row mt-4">
             <div className="col-md-6">
-                <h5>Spending by Category</h5>
+                <h5>Expense Breakdown by Category</h5>
                 <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                         <Pie

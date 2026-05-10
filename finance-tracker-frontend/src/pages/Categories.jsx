@@ -52,13 +52,27 @@ const Categories = () => {
             <h2>Manage Categories</h2>
 
             <form onSubmit={handleSubmit(onSubmit)} className="mb-3 d-flex gap-2">
+
                 <input
                     className="form-control"
                     placeholder="Category Name"
                     {...register('name')}
                     required
                 />
-                <button type="submit" className="btn btn-success">Add</button>
+
+                <select
+                    className="form-select"
+                    {...register('type')}
+                    required
+                >
+                    <option value="">Select Type</option>
+                    <option value="INCOME">Income</option>
+                    <option value="EXPENSE">Expense</option>
+                </select>
+
+                <button type="submit" className="btn btn-success">
+                    Add
+                </button>
             </form>
 
             {categories.length === 0 ? (
@@ -66,9 +80,29 @@ const Categories = () => {
             ) : (
                 <ul className="list-group">
                     {categories.map(cat => (
-                        <li key={cat.id} className="list-group-item d-flex justify-content-between align-items-center">
-                            {cat.name}
-                            <button className="btn btn-sm btn-danger" onClick={() => deleteCategory(cat.id)}>Delete</button>
+                        <li
+                            key={cat.id}
+                            className="list-group-item d-flex justify-content-between align-items-center"
+                        >
+                            <div>
+                                <strong>{cat.name}</strong>
+
+                                <span
+                                    className={`badge ms-2 ${cat.type === 'INCOME'
+                                            ? 'bg-success'
+                                            : 'bg-danger'
+                                        }`}
+                                >
+                                    {cat.type}
+                                </span>
+                            </div>
+
+                            <button
+                                className="btn btn-sm btn-danger"
+                                onClick={() => deleteCategory(cat.id)}
+                            >
+                                Delete
+                            </button>
                         </li>
                     ))}
                 </ul>

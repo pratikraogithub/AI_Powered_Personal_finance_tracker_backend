@@ -11,8 +11,10 @@ const Transactions = () => {
     const [transactions, setTransactions] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
-    const { register, handleSubmit, reset } = useForm();
+    const { register, handleSubmit, reset, watch } = useForm();
     const navigate = useNavigate();
+
+    const selectedType = watch('type');
 
     useEffect(() => {
         const token = localStorage.getItem('access');
@@ -100,6 +102,10 @@ const Transactions = () => {
         .reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
 
     const balance = incomeTotal - expenseTotal;
+
+    const filteredCategories = categories.filter(
+        (cat) => cat.type === selectedType?.toUpperCase()
+    );
 
     return (
         <div className="w-100 min-vh-100 bg-light py-4">
@@ -189,9 +195,19 @@ const Transactions = () => {
 
                                         <div className="col-12 col-md-6 col-lg-3">
                                             <label className="form-label small text-muted">Category</label>
-                                            <select className="form-select" {...register('category')} required>
-                                                <option value="">Select Category</option>
-                                                {categories.map((cat) => (
+                                            <select
+                                                className="form-select"
+                                                {...register('category')}
+                                                disabled={!selectedType}
+                                                required
+                                            >
+                                                <option value="">
+                                                    {selectedType
+                                                        ? 'Select Category'
+                                                        : 'Select Transaction Type First'}
+                                                </option>
+
+                                                {filteredCategories.map((cat) => (
                                                     <option key={cat.id} value={cat.id}>
                                                         {cat.name}
                                                     </option>
