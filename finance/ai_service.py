@@ -1,184 +1,184 @@
-import ollama
+import json
 import logging
+import ollama
 
 logger = logging.getLogger(__name__)
 
+
+SYSTEM_PROMPT = """
+You are a finance query parser.
+
+Your task is to convert user finance questions into structured JSON.
+
+IMPORTANT RULES:
+- Return ONLY valid JSON
+- Do NOT explain anything
+- Do NOT return markdown
+- Do NOT return SQL
+- Do NOT add extra text
+
+Supported actions:
+- sum
+- filter
+- top_category
+- compare
+
+Supported transaction types:
+- EXPENSE
+- INCOME
+
+Supported filters:
+- category
+- period
+- min_amount
+- max_amount
+
+Examples:
+
+User: How much did I spend this month?
+Output:
+{
+  "action": "sum",
+  "type": "EXPENSE",
+  "period": "this_month"
+}
+
+User: Show food expenses this month
+Output:
+{
+  "action": "sum",
+  "type": "EXPENSE",
+  "category": "Food",
+  "period": "this_month"
+}
+
+User: Show expenses above 5000
+Output:
+{
+  "action": "filter",
+  "type": "EXPENSE",
+  "min_amount": 5000
+}
+
+User: Which category has highest spending?
+Output:
+{
+  "action": "top_category",
+  "type": "EXPENSE"
+}
+
+User: Compare this month spending with last month
+Output:
+{
+  "action": "compare",
+  "type": "EXPENSE",
+  "periods": ["this_month", "last_month"]
+}
+"""
+
+
 def query_llm(
-    prompt: str, 
+    user_query: str,
     model: str = "llama3.2:3b",
-    temperature: float = 0.7,
-    max_tokens: int = 500,
-    stream: bool = False,
-    system_message: str = None
-) -> str:
+    temperature: float = 0,
+):
     """
-    Send a prompt to your local Ollama LLaMA model and get a response.
-    
-    Args:
-        prompt: The user's question or request
-        model: Ollama model name (default: "llama3.2")
-        temperature: Creativity level 0-1 (default: 0.7)
-        max_tokens: Maximum response length (default: 500)
-        stream: Whether to stream the response (default: False)
-        system_message: Custom system prompt (optional)
-    
-    Returns:
-        str: The model's response
+    Convert natural language finance queries into structured JSON.
     """
-    
-    # Default system message for finance assistant
-    if system_message is None:
-        system_message = (
-            "You are an intelligent personal finance assistant. "
-            "You analyze user income and expenses, then give clear insights and advice "
-            "on saving, spending, or budgeting. Be concise and human-like."
-        )
-    
+
     try:
-        # Build messages
         messages = [
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": prompt},
+            {
+                "role": "system",
+                "content": SYSTEM_PROMPT,
+            },
+            {
+                "role": "user",
+                "content": user_query,
+            },
         ]
-        
-        logger.info(f"Querying {model} with prompt: {prompt[:100]}...")
-        
-        # Make request to Ollama
+
+        logger.info(f"Sending query to model: {user_query}")
+
         response = ollama.chat(
             model=model,
             messages=messages,
-            stream=stream,
             options={
                 "temperature": temperature,
-                "num_predict": max_tokens,  # Ollama uses num_predict instead of max_tokens
             }
         )
-        
-        # Handle streaming vs non-streaming
-        if stream:
-            # Return generator for streaming
-            return _handle_stream(response)
-        else:
-            # Extract message content
-            content = response.get("message", {}).get("content", "")
-            
-            if not content:
-                logger.warning("Empty response from model")
-                return "I apologize, but I couldn't generate a response. Please try again."
-            
-            logger.info(f"Received response: {content[:100]}...")
-            return content
-            
+
+        content = response.get("message", {}).get("content", "").strip()
+
+        logger.info(f"Raw model response: {content}")
+
+        # Remove markdown wrappers if model returns ```json
+        content = (
+            content
+            .replace("```json", "")
+            .replace("```", "")
+            .strip()
+        )
+
+        parsed_json = json.loads(content)
+
+        logger.info(f"Parsed JSON: {parsed_json}")
+
+        return parsed_json
+
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON parsing error: {e}")
+
+        return {
+            "success": False,
+            "error": "Invalid JSON response from model",
+            "raw_response": content if 'content' in locals() else None
+        }
+
     except ollama.ResponseError as e:
         logger.error(f"Ollama response error: {e}")
-        return f"Error: The model returned an error - {str(e)}"
-    
+
+        return {
+            "success": False,
+            "error": f"Ollama error: {str(e)}"
+        }
+
     except ConnectionError as e:
         logger.error(f"Connection error: {e}")
-        return (
-            "Error: Cannot connect to Ollama. "
-            "Please make sure Ollama is running (run 'ollama serve')."
-        )
-    
+
+        return {
+            "success": False,
+            "error": (
+                "Cannot connect to Ollama. "
+                "Please make sure Ollama is running."
+            )
+        }
+
     except Exception as e:
-        logger.error(f"Unexpected error querying model: {e}", exc_info=True)
-        return f"Error querying local model: {str(e)}"
+        logger.error(f"Unexpected error: {e}", exc_info=True)
+
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
-def _handle_stream(response):
-    """Handle streaming responses from Ollama"""
-    for chunk in response:
-        if "message" in chunk and "content" in chunk["message"]:
-            yield chunk["message"]["content"]
-
-
-def query_llm_with_history(
-    prompt: str,
-    conversation_history: list = None,
-    model: str = "llama3.2",
-    temperature: float = 0.7,
-    system_message: str = None
-) -> tuple:
-    """
-    Query LLM with conversation history for multi-turn conversations.
-    
-    Args:
-        prompt: The user's current message
-        conversation_history: List of previous messages
-        model: Ollama model name
-        temperature: Creativity level
-        system_message: Custom system prompt
-    
-    Returns:
-        tuple: (response_text, updated_history)
-    """
-    
-    if system_message is None:
-        system_message = (
-            "You are an intelligent personal finance assistant. "
-            "You analyze user income and expenses, then give clear insights and advice "
-            "on saving, spending, or budgeting. Be concise and human-like."
-        )
-    
-    # Initialize history if None
-    if conversation_history is None:
-        conversation_history = []
-    
-    # Build messages with history
-    messages = [{"role": "system", "content": system_message}]
-    messages.extend(conversation_history)
-    messages.append({"role": "user", "content": prompt})
-    
-    try:
-        response = ollama.chat(
-            model=model,
-            messages=messages,
-            options={"temperature": temperature}
-        )
-        
-        content = response.get("message", {}).get("content", "")
-        
-        # Update history
-        conversation_history.append({"role": "user", "content": prompt})
-        conversation_history.append({"role": "assistant", "content": content})
-        
-        return content, conversation_history
-        
-    except Exception as e:
-        logger.error(f"Error in conversation: {e}")
-        return f"Error: {str(e)}", conversation_history
-
-
-# Example usage for different scenarios
 if __name__ == "__main__":
-    
-    # Basic usage
-    response = query_llm("I spent $500 this month on groceries. Is that too much?")
-    print(f"Basic response: {response}\n")
-    
-    # With custom system message
-    response = query_llm(
-        "Analyze my spending pattern",
-        system_message="You are a data analyst specializing in financial patterns."
-    )
-    print(f"Custom system: {response}\n")
-    
-    # With conversation history
-    history = []
-    response1, history = query_llm_with_history(
-        "My monthly income is $5000",
-        conversation_history=history
-    )
-    print(f"Turn 1: {response1}\n")
-    
-    response2, history = query_llm_with_history(
-        "Should I save more?",
-        conversation_history=history
-    )
-    print(f"Turn 2: {response2}\n")
-    
-    # Streaming example
-    print("Streaming response:")
-    for chunk in query_llm("Give me 3 budgeting tips", stream=True):
-        print(chunk, end="", flush=True)
-    print("\n")
+
+    test_queries = [
+        "How much did I spend this month?",
+        "Show food expenses this month",
+        "Show expenses above 5000",
+        "Which category has highest spending?",
+        "Compare this month spending with last month"
+    ]
+
+    for query in test_queries:
+
+        print("\n" + "=" * 50)
+        print(f"Question: {query}")
+
+        result = query_llm(query)
+
+        print("Parsed Response:")
+        print(json.dumps(result, indent=2))
