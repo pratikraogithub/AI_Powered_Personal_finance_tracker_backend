@@ -1,5 +1,6 @@
 from django.db.models import Sum
 from django.utils import timezone
+from datetime import timedelta
 
 from finance.models import Transaction
 
@@ -29,6 +30,31 @@ def handle_finance_query(user, data):
         queryset = queryset.filter(
             date__month=now.month,
             date__year=now.year
+        )
+
+        # Yesterday
+    if period == "yesterday":
+
+        yesterday = timezone.now().date() - timedelta(days=1)
+
+        queryset = queryset.filter(date=yesterday)
+
+
+    # Last Month
+    if period == "last_month":
+
+        now = timezone.now()
+
+        if now.month == 1:
+            month = 12
+            year = now.year - 1
+        else:
+            month = now.month - 1
+            year = now.year
+
+        queryset = queryset.filter(
+            date__month=month,
+            date__year=year
         )
 
     # Filter by minimum amount

@@ -39,7 +39,7 @@ const FloatingChat = () => {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            const fullResponse = res.data.response || "No response";
+            const fullResponse = res.data?.result?.response || res.data?.response || "No response";
 
             // Typewriter effect
             let currentText = "";

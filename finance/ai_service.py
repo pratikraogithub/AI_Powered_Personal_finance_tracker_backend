@@ -77,6 +77,7 @@ def query_llm(user_query: str):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             temperature=0,
+            response_format={"type": "json_object"},
             messages=[
                 {
                     "role": "system",

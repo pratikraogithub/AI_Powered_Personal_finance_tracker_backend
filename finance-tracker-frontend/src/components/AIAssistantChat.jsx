@@ -10,25 +10,57 @@ function AIAssistantChat() {
 
     const sendMessage = async (e) => {
         e.preventDefault();
+
         if (!input.trim()) return;
 
-        const userMessage = { sender: "user", text: input };
+        const currentInput = input;
+
+        const userMessage = {
+            sender: "user",
+            text: currentInput,
+        };
+
         setMessages((prev) => [...prev, userMessage]);
+
         setInput("");
         setLoading(true);
 
         try {
-            const res = await api.post("/api/ai-assistant/", { query: input });
-            const aiMessage = { sender: "ai", text: res.data.response };
+
+            const res = await api.post("/api/ai-assistant/", {
+                query: currentInput,
+            });
+
+            console.log("API RESPONSE:", res.data);
+
+            const botText =
+                res.data?.result?.response ||
+                res.data?.response ||
+                "No response";
+
+            const aiMessage = {
+                sender: "ai",
+                text: botText,
+            };
+
             setMessages((prev) => [...prev, aiMessage]);
+
         } catch (error) {
+
             console.error(error);
+
             setMessages((prev) => [
                 ...prev,
-                { sender: "ai", text: "⚠️ Sorry, I couldn’t process your request. Please try again later." },
+                {
+                    sender: "ai",
+                    text: "⚠️ Sorry, I couldn’t process your request.",
+                },
             ]);
+
         } finally {
+
             setLoading(false);
+
         }
     };
 
@@ -51,8 +83,8 @@ function AIAssistantChat() {
                         >
                             <div
                                 className={`p-3 rounded-4 ${msg.sender === "user"
-                                        ? "bg-primary text-white"
-                                        : "bg-light border text-dark"
+                                    ? "bg-primary text-white"
+                                    : "bg-light border text-dark"
                                     }`}
                                 style={{ maxWidth: "75%" }}
                             >
