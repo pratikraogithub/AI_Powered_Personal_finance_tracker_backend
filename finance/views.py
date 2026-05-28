@@ -1,7 +1,6 @@
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 
-from finance.services.finance_service import handle_finance_query
 from .models import Category
 from .serializers import CategorySerializer
 
@@ -14,8 +13,10 @@ from collections import defaultdict
 from finance.models import Transaction, AIInsight
 from finance.serializers import TransactionSerializer
 
-from finance.ai_service import query_llm
 from rest_framework.views import APIView
+
+from finance.services.sql_ai_service import generate_human_response, generate_sql
+from finance.services.sql_executor import execute_sql
 
 
 
@@ -77,6 +78,34 @@ class TransactionViewSet(ModelViewSet):
             {"month": m, **v} for m, v in summary.items()
         ])
     
+# class AIFinanceAssistantAPIView(APIView):
+
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request):
+
+#         user = request.user
+#         query = request.data.get("query")
+
+#         # Step 1: Convert natural language -> JSON
+#         parsed_data = query_llm(query)
+
+#         # Step 2: Execute ORM query safely
+#         result = handle_finance_query(user, parsed_data)
+
+#         AIInsight.objects.create(
+#             user=user,
+#             query=query,
+#             parsed_data=parsed_data,
+#             response=str(result)
+#         )
+
+#         return Response({
+#             "query": query,
+#             "parsed_data": parsed_data,
+#             "result": result
+#         })
+    
 class AIFinanceAssistantAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -84,23 +113,24 @@ class AIFinanceAssistantAPIView(APIView):
     def post(self, request):
 
         user = request.user
+
         query = request.data.get("query")
 
-        # Step 1: Convert natural language -> JSON
-        parsed_data = query_llm(query)
+        sql_query = generate_sql(
+            user_query=query,
+            user_id=user.id
+        )
 
-        # Step 2: Execute ORM query safely
-        result = handle_finance_query(user, parsed_data)
+        result = execute_sql(sql_query)
 
-        AIInsight.objects.create(
-            user=user,
-            query=query,
-            parsed_data=parsed_data,
-            response=str(result)
+        human_response = generate_human_response(
+            query,
+            result
         )
 
         return Response({
             "query": query,
-            "parsed_data": parsed_data,
-            "result": result
+            "generated_sql": sql_query,
+            "sql_result": result,
+            "response": human_response
         })

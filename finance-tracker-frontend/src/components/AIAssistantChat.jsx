@@ -34,7 +34,6 @@ function AIAssistantChat() {
             console.log("API RESPONSE:", res.data);
 
             const botText =
-                res.data?.result?.response ||
                 res.data?.response ||
                 "No response";
 
