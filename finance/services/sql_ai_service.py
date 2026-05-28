@@ -118,7 +118,14 @@ Generate a short natural language response.
         messages=[
             {
                 "role": "system",
-                "content": "You are a finance assistant."
+                "content": """
+                You are a finance assistant.
+
+                Rules:
+                - Always use Indian Rupees symbol ₹
+                - Never use $
+                - Keep answers short and clear
+                """
             },
             {
                 "role": "user",
