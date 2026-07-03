@@ -6,11 +6,12 @@ from .serializers import CategorySerializer
 
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework import status
 from django.db.models import Sum
 from django.db.models.functions import TruncMonth
 from collections import defaultdict
 
-from finance.models import Transaction, AIInsight
+from finance.models import Transaction
 from finance.serializers import TransactionSerializer
 
 from rest_framework.views import APIView
@@ -30,6 +31,17 @@ class CategoryViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        category = self.get_object()
+
+        if category.is_default:
+            return Response(
+                {"error": "Default categories cannot be deleted."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return super().destroy(request, *args, **kwargs)
 
 
 class TransactionViewSet(ModelViewSet):
@@ -83,35 +95,6 @@ class TransactionViewSet(ModelViewSet):
                 summary[month]["expense"] = row["total"]
 
         return Response([{"month": m, **v} for m, v in summary.items()])
-
-
-# class AIFinanceAssistantAPIView(APIView):
-
-#     permission_classes = [IsAuthenticated]
-
-#     def post(self, request):
-
-#         user = request.user
-#         query = request.data.get("query")
-
-#         # Step 1: Convert natural language -> JSON
-#         parsed_data = query_llm(query)
-
-#         # Step 2: Execute ORM query safely
-#         result = handle_finance_query(user, parsed_data)
-
-#         AIInsight.objects.create(
-#             user=user,
-#             query=query,
-#             parsed_data=parsed_data,
-#             response=str(result)
-#         )
-
-#         return Response({
-#             "query": query,
-#             "parsed_data": parsed_data,
-#             "result": result
-#         })
 
 
 class AIFinanceAssistantAPIView(APIView):
