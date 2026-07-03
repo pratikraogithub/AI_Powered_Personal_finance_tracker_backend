@@ -11,6 +11,14 @@ const Transactions = () => {
     const [transactions, setTransactions] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [editingTx, setEditingTx] = useState(null);
+    const [editForm, setEditForm] = useState({
+        type: '',
+        amount: '',
+        category: '',
+        date: '',
+        description: ''
+    });
     const { register, handleSubmit, reset, watch } = useForm();
     const navigate = useNavigate();
 
@@ -106,6 +114,73 @@ const Transactions = () => {
     const filteredCategories = categories.filter(
         (cat) => cat.type === selectedType?.toUpperCase()
     );
+
+    const deleteTransaction = async (id) => {
+        const token = localStorage.getItem('access');
+
+        if (!window.confirm('Are you sure you want to delete this transaction?')) return;
+
+        try {
+            await api.delete(`finance/transactions/${id}/`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            setTransactions(prev => prev.filter(tx => tx.id !== id));
+        } catch (err) {
+            console.error('Delete error:', err.response?.data || err.message);
+        }
+    };
+
+    const startEdit = (tx) => {
+        setEditingTx(tx);
+
+        setEditForm({
+            type: tx.type,
+            amount: tx.amount,
+            category: tx.category?.id || '',
+            date: tx.date,
+            description: tx.description || ''
+        });
+    };
+
+    const handleEditChange = (e) => {
+        setEditForm({
+            ...editForm,
+            [e.target.name]: e.target.value
+        });
+    };
+
+    const updateTransaction = async () => {
+        const token = localStorage.getItem('access');
+
+        try {
+            const payload = {
+                type: editForm.type.toUpperCase(),
+                amount: parseFloat(editForm.amount),
+                category_id: parseInt(editForm.category),
+                date: editForm.date,
+                description: editForm.description
+            };
+
+            const res = await api.put(
+                `finance/transactions/${editingTx.id}/`,
+                payload,
+                {
+                    headers: { Authorization: `Bearer ${token}` }
+                }
+            );
+
+            setTransactions(prev =>
+                prev.map(tx =>
+                    tx.id === editingTx.id ? res.data : tx
+                )
+            );
+
+            setEditingTx(null);
+        } catch (err) {
+            console.error('Update error:', err.response?.data || err.message);
+        }
+    };
 
     return (
         <div className="w-100 min-vh-100 bg-light py-4">
@@ -350,6 +425,21 @@ const Transactions = () => {
                                                         </small>
                                                     </div>
                                                     <div className="text-end ms-3">
+                                                        <div className="d-flex gap-2 mb-2">
+                                                            <button
+                                                                className="btn btn-sm btn-outline-primary"
+                                                                onClick={() => startEdit(tx)}
+                                                            >
+                                                                Edit
+                                                            </button>
+
+                                                            <button
+                                                                className="btn btn-sm btn-outline-danger"
+                                                                onClick={() => deleteTransaction(tx.id)}
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </div>
                                                         <h5 className={`mb-0 fw-bold ${tx.type === 'INCOME' ? 'text-success' : 'text-danger'}`}>
                                                             {tx.type === 'INCOME' ? '+' : '-'}₹{parseFloat(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </h5>
@@ -364,6 +454,105 @@ const Transactions = () => {
                     </div>
                 </div>
             </div>
+            {editingTx && (
+                <div className="modal show d-block bg-dark bg-opacity-50">
+                    <div className="modal-dialog modal-lg">
+                        <div className="modal-content p-4">
+
+                            <h5 className="mb-3">✏️ Edit Transaction</h5>
+
+                            <div className="row g-3">
+
+                                {/* Type */}
+                                <div className="col-md-6">
+                                    <label className="form-label">Type</label>
+                                    <select
+                                        className="form-select"
+                                        name="type"
+                                        value={editForm.type}
+                                        onChange={handleEditChange}
+                                    >
+                                        <option value="INCOME">Income</option>
+                                        <option value="EXPENSE">Expense</option>
+                                    </select>
+                                </div>
+
+                                {/* Amount */}
+                                <div className="col-md-6">
+                                    <label className="form-label">Amount</label>
+                                    <input
+                                        type="number"
+                                        className="form-control"
+                                        name="amount"
+                                        value={editForm.amount}
+                                        onChange={handleEditChange}
+                                    />
+                                </div>
+
+                                {/* Category */}
+                                <div className="col-md-6">
+                                    <label className="form-label">Category</label>
+                                    <select
+                                        className="form-select"
+                                        name="category"
+                                        value={editForm.category}
+                                        onChange={handleEditChange}
+                                    >
+                                        {categories.map(cat => (
+                                            <option key={cat.id} value={cat.id}>
+                                                {cat.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Date */}
+                                <div className="col-md-6">
+                                    <label className="form-label">Date</label>
+                                    <input
+                                        type="date"
+                                        className="form-control"
+                                        name="date"
+                                        value={editForm.date}
+                                        onChange={handleEditChange}
+                                    />
+                                </div>
+
+                                {/* Description */}
+                                <div className="col-12">
+                                    <label className="form-label">Description</label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        name="description"
+                                        value={editForm.description}
+                                        onChange={handleEditChange}
+                                    />
+                                </div>
+
+                            </div>
+
+                            {/* Buttons */}
+                            <div className="d-flex justify-content-end gap-2 mt-4">
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={() => setEditingTx(null)}
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={updateTransaction}
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
