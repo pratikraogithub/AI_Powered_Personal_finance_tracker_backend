@@ -45,7 +45,7 @@ const Categories = () => {
             });
             fetchCategories();
         } catch (err) {
-            console.error('Error deleting category:', err.response?.data || err.message);
+            alert(err.response?.data?.error || "Failed to delete category.");
         }
     };
 

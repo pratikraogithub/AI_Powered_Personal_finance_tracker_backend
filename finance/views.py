@@ -41,6 +41,15 @@ class CategoryViewSet(ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Prevent deleting categories that have transactions
+        if category.transaction_set.exists():
+            return Response(
+                {
+                    "error": "This category is being used by existing transactions and cannot be deleted."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         return super().destroy(request, *args, **kwargs)
 
 
