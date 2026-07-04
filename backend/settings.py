@@ -67,6 +67,7 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "https://finance-tracker-frontend-theta-three.vercel.app",
 ]
 
 ROOT_URLCONF = "backend.urls"
@@ -162,3 +163,8 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://ai-powered-personal-finance-tracker-hg5i.onrender.com",
+    "https://finance-tracker-frontend-theta-three.vercel.app",
+]
