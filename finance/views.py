@@ -121,13 +121,20 @@ class AIFinanceAssistantAPIView(APIView):
 
         sql_query = generate_sql(user_query=query, user_id=user.id)
 
-        logger.info(f"Generated SQL: {sql_query}")
+        print("========== GENERATED SQL ==========")
+        print(sql_query)
 
         result = execute_sql(sql_query)
+
+        print("========== SQL RESULT ==========")
+        print(result)
 
         logger.info(f"SQL Result: {result}")
 
         human_response = generate_human_response(query, result)
+
+        print("========== AI RESPONSE ==========")
+        print(human_response)
 
         return Response(
             {
