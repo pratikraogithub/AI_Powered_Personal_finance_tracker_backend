@@ -21,6 +21,10 @@ from finance.services.sql_executor import execute_sql
 
 from django.db.models import Q
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class CategoryViewSet(ModelViewSet):
     serializer_class = CategorySerializer
@@ -117,7 +121,11 @@ class AIFinanceAssistantAPIView(APIView):
 
         sql_query = generate_sql(user_query=query, user_id=user.id)
 
+        logger.info(f"Generated SQL: {sql_query}")
+
         result = execute_sql(sql_query)
+
+        logger.info(f"SQL Result: {result}")
 
         human_response = generate_human_response(query, result)
 
